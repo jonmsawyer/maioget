@@ -3,8 +3,16 @@ import sys
 import time
 
 from maioget.parse_args import parse_args
-from maioget.threads import GetProfiles
 from maioget.threads import ProfileThread
+import logger #exposes maioget.logger
+
+def _t(*args):
+    txt = ''
+    for arg in args:
+        txt += str(arg)+" "
+    return txt
+
+_log = None
 
 class MaioGetBase:
     __metaclass__ = ABCMeta
@@ -12,20 +20,28 @@ class MaioGetBase:
     def __init__(self, *args, **kwargs):
         self.args = list(args)
         self.kwargs = dict(kwargs)
+
+    def set_logger(self, logger):
+        """
+        Call this in derived class' Constructor to have logging set up properly
+        """
+        global _log
+        self.logger = logger
+        _log = self.logger
     
     def main(self):
-        print "Hi, welcome to MaioGet!"
-        print "args:", self.args
-        print "kwargs:", self.kwargs
+        _log = self.logger
+        _log.info("Hi, welcome to MaioGet!")
+        _log.debug(_t("args:", self.args))
+        _log.debug(_t("kwargs:", self.kwargs))
         profiles = ['profile_'+str(num) for num in range(5)]
-        print profiles
-        #getprofiles = GetProfiles(profiles, int(self.kwargs.get('threads', 5)))
+        _log.info(_t("Profiles:", profiles))
         try:
-            getprofiles = ProfileThread(profiles, int(self.kwargs.get('threads', 5)))
+            getprofiles = ProfileThread(profiles, int(self.kwargs.get('threads', 5)), self.logger)
             getprofiles.start()
         except KeyboardInterrupt, e:
-            print "Got interrupt!"
-            print "Killing threads..."
+            _log.debug("Got interrupt!")
+            _log.debug("Killing threads...")
             getprofiles.kill_all_threads = True
         try:
             empty = False
@@ -40,10 +56,10 @@ class MaioGetBase:
                         threads_over = False
                 time.sleep(0.2)
         except KeyboardInterrupt:
-            print "Got second interrupt!"
-            print "Killing all threads..."
+            _log.debug("Got second interrupt!")
+            _log.debug("Killing all threads...")
             getprofiles.kill_all_threads = True
-        print 'Exiting main thread!'
+        _log.debug('Exiting main thread!')
     
     def command_line(self):
         return self.main()

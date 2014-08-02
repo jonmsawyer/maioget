@@ -6,49 +6,7 @@ import Queue
 from random import randint
 import sys
 
-#########################################################################
-
-threadlock = threading.Lock()
-def runme(txt):
-    threadlock.acquire()
-    print 'In thread safe function:', txt
-    threadlock.release()
-
-def partition(lst, n):
-    """
-    Given lst, n, partition lst into n nearly equal partitions
-    """
-    return [lst[i::n] for i in xrange(n)]
-
-class GetProfile(threading.Thread):
-    def __init__(self, profile_list):
-        threading.Thread.__init__(self)
-        self.profile_list = profile_list
-        self.threadlock = threading.Lock()
-    def run(self):
-        print "Starting " + str(self.profile_list)
-        for profile in self.profile_list:
-            counter = 0
-            while counter < 5:
-                time.sleep(randint(1,3))
-                counter += 1
-                runme('Thread %s %s' % (profile, counter))
-
-class GetProfiles():
-    def __init__(self, profiles, threads):
-        self.profiles = profiles
-        self.threads = threads
-        self.thread_list = []
-    def start(self):
-        print self.profiles, self.threads
-        for profile_list in partition(self.profiles, self.threads):
-            self.getProfileList(profile_list)
-    def getProfileList(self, profiles):
-        t = GetProfile(profiles)
-        t.start()
-        self.thread_list.append(t)
-
-#########################################################################
+import logger
 
 _print_lock = threading.Lock()
 def _print(*args):
@@ -57,14 +15,28 @@ def _print(*args):
             print str(arg)+" ",
         print ""
 
+def _t(*args):
+    txt = ''
+    for arg in args:
+        txt += str(arg)+" "
+    return txt
+
+_log = None
+
 class ProfileThread():
-    def __init__(self, profiles, threads):
+    def __init__(self, profiles, threads, mainlogger=None):
+        global _log
         self.profiles = profiles
         self.threads = threads
         self.thread_list = []
         self.thread = None
         self.queue = Queue.Queue()
         self.kill_all_threads = False
+        if mainlogger:
+            self.logger = mainlogger
+        else:
+            self.logger = logger.setup()
+        _log = self.logger
     #def do_work(self, profile):
     #    _print("In ProfileThread.do_work => Profile", profile)
     #    pages = ['page_'+str(num) for num in range(4)]
@@ -72,32 +44,33 @@ class ProfileThread():
     #    getpages = PagesThread(profile, pages, self.threads)
     #    etpages.start()
     def test_work(self, *args, **kwargs):
-        id = args[0]
+        thread = args[0]
         profile = args[1]
         for i in xrange(0, 2):
             if self.kill_all_threads:
                 break
             num = randint(1,1)
-            _print("Thread ID:", id, "Profile:",profile,">> Doing work for", num, "seconds")
+            _log.debug(_t(thread.name, "Profile:",profile,">> Doing work for", num, "seconds"))
             time.sleep(num)
-    def worker(self, id):
+    def worker(self):
+        thread = threading.current_thread()
         while not self.kill_all_threads:
             try:
                 profile = self.queue.get(True, 1)
-                _print("Profile:", profile)
-                self.test_work(id, profile)
+                _log.debug(_t(thread.name, "Profile:", profile))
+                self.test_work(thread, profile)
                 self.queue.task_done()
             except Queue.Empty, e:
                 return
     def start(self):
         for num in range(self.threads):
-            t = threading.Thread(target=self.worker, args=(num,))
+            t = threading.Thread(target=self.worker, args=())
             t.start()
             self.thread_list.append(t)
         for profile in self.profiles:
             self.queue.put(profile)
         for thread in self.thread_list:
-            _print("Hi!")
+            _log.debug(_t("%s was created ..." % (thread.name,)))
             thread.join(0.001)
 
 #class PagesThread():
