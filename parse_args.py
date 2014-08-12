@@ -10,55 +10,56 @@ def parse_args():
     from optparse import OptionParser
     import sys
     parser = OptionParser()
-    file_options = {
-        'dest': 'filename',
-        'help': 'write report to FILE',
-        'type': 'string',
-        'metavar': 'FILE',
-    }
-    quiet_options = {
-        'dest': 'verbose',
-        'default': True,
-        'action': 'store_false',
-        'help': "don't print status messages to stdout",
-    }
     daemon_options = {
         'dest': 'daemon',
         'default': False,
         'action': 'store_true',
-        'help': "let MaioGet know that the process is running in daemon mode. Setting this flag will supress output to STDOUT",
+        'help': "Enable daemon mode. Setting this flag will supress output to STDOUT. Default is non-daemon mode.",
     }
     loglevel_options = {
         'dest': 'loglevel',
         'default': 'INFO',
         'type': 'string',
-        'help': "configure the log level of MaioGet. One of DEBUG, INFO, WARNING, ERROR, or CRITICAL",
-        'metavar': 'LOGLEVEL',
+        'help': "Configure the logging level. Must be one of DEBUG, INFO, WARNING, ERROR, or CRITICAL. Default is INFO.",
+        'metavar': 'LOG_LEVEL',
     }
-    foo_options = {
-        'dest': 'foo',
-        'default': 'bar',
-        'metavar': 'FOO',
-        'help': 'be a FOO and help BAR be a BAZ',
+    logsdir_options = {
+        'dest': 'logsdir',
+        'default': 'logs',
+        'type': 'string',
+        'help': "Put the logs into the LOGS_DIR directory.",
+        'metavar': 'LOGS_DIR',
+    }
+    name_options = {
+        'dest': 'name',
+        'default': 'UNNAMED',
+        'type': 'string',
+        'help': "The name of the MaioGet app.",
+        'metavar': 'NAME',
     }
     threads_options = {
         'dest': 'threads',
         'default': 5,
         'type': 'int',
-        'metavar': 'THREADS',
-        'help': 'spread the profiles list into THREADS threads',
+        'metavar': 'NUM_THREADS',
+        'help': 'Process the profiles list using NUM_THREADS threads. Default is 5.',
     }
-    parser.add_option('-t', '--threads', **threads_options)
-    parser.add_option('-q', '--quiet', **quiet_options)
     parser.add_option('-d', '--daemon', **daemon_options)
+    parser.add_option('-D', '--logs-dir', **logsdir_options)
     parser.add_option('-l', '--log-level', **loglevel_options)
+    parser.add_option('-n', '--name', **name_options)
+    parser.add_option('-t', '--threads', **threads_options)
     (options, args) = parser.parse_args()
     opts = dict(options.__dict__)
     opts['command_line_args'] = args
+    
+    # Make sure that the log level flag is upper case and that the
+    # log level is valid. Exit if not.
     opts['loglevel'] = opts['loglevel'].upper()
     if opts['loglevel'] not in ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'):
         print "%s: error: option -l|--log-level: invalid string value: '%s'" % (sys.argv[0], opts['loglevel'])
         parser.print_help()
         sys.exit(1)
+    
     return opts
 

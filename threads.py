@@ -24,29 +24,27 @@ def _t(*args):
 _log = None
 
 class ProfileThread():
-    def __init__(self, profiles, threads, mainlogger=None):
+    def __init__(self, MaioGetObj, profiles):
         global _log
+        self.getobj = MaioGetObj
         self.profiles = profiles
-        self.threads = threads
+        self.threads = int(MaioGetObj.kwargs.get('threads', 5))
+        self.logger = MaioGetObj.logger
         self.thread_list = []
         self.thread = None
         self.queue = Queue.Queue()
         self.kill_all_threads = False
-        if mainlogger:
-            self.logger = mainlogger
-        else:
-            self.logger = logger.setup()
         _log = self.logger
     #def do_work(self, profile):
     #    _print("In ProfileThread.do_work => Profile", profile)
     #    pages = ['page_'+str(num) for num in range(4)]
     #    _print(pages)
     #    getpages = PagesThread(profile, pages, self.threads)
-    #    etpages.start()
+    #    getpages.start()
     def test_work(self, *args, **kwargs):
         thread = args[0]
         profile = args[1]
-        for i in xrange(0, 2):
+        for i in xrange(0, 50):
             if self.kill_all_threads:
                 break
             num = randint(1,1)
@@ -60,7 +58,7 @@ class ProfileThread():
                 _log.debug(_t(thread.name, "Profile:", profile))
                 self.test_work(thread, profile)
                 self.queue.task_done()
-            except Queue.Empty, e:
+            except Queue.Empty as e:
                 return
     def start(self):
         for num in range(self.threads):
